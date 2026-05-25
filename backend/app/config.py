@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     )
 
     bot_token: str = ""  # обязателен для бота; API стартует и без него
+    # polling — локально; webhook — Render (один экземпляр, без Conflict)
+    bot_mode: str = "polling"
     webapp_url: str = "http://localhost:5173"
     api_host: str = "0.0.0.0"
     api_port: int = 8000  # на Render подставляется PORT

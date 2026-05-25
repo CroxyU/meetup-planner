@@ -13,6 +13,8 @@ services:
     envVars:
       - key: BOT_TOKEN
         sync: false
+      - key: BOT_MODE
+        value: webhook
       - key: WEBAPP_URL
         value: https://meetup-planner.onrender.com
       - key: SECRET_KEY

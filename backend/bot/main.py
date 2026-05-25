@@ -171,13 +171,31 @@ async def setup_webapp_menu() -> None:
         logging.warning("Не удалось обновить Menu Button: %s", e)
 
 
+async def setup_webhook() -> None:
+    """Продакшен: один webhook вместо polling (нет Conflict на Render)."""
+    url = f"{webapp_url()}/webhook/telegram"
+    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.set_webhook(url, drop_pending_updates=True)
+    logging.info("Webhook: %s", url)
+
+
 async def run_bot_polling() -> None:
-    """Polling в фоне FastAPI (один процесс — без гонок SQLite)."""
+    """Локальная разработка: polling (сначала снимаем webhook)."""
+    if not settings.bot_token:
+        logging.error("BOT_TOKEN не задан")
+        return
+    await bot.delete_webhook(drop_pending_updates=True)
+    await setup_webapp_menu()
+    await dp.start_polling(bot, drop_pending_updates=True)
+
+
+async def run_bot_webhook_mode() -> None:
+    """Render: только menu + регистрация webhook, без polling."""
     if not settings.bot_token:
         logging.error("BOT_TOKEN не задан")
         return
     await setup_webapp_menu()
-    await dp.start_polling(bot)
+    await setup_webhook()
 
 
 async def main():

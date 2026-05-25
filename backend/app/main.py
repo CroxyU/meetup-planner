@@ -39,10 +39,20 @@ async def lifespan(app: FastAPI):
 
     bot_task = None
     if settings.bot_token:
-        from bot.main import run_bot_polling
+        mode = (settings.bot_mode or "polling").lower()
+        logger.info("BOT_MODE=%s", mode)
 
-        bot_task = asyncio.create_task(run_bot_polling())
-        logger.info("Бот запущен в том же процессе (без конфликта SQLite)")
+        if mode == "webhook":
+            from bot.main import run_bot_webhook_mode
+
+            await run_bot_webhook_mode()
+        elif mode == "polling":
+            from bot.main import run_bot_polling
+
+            bot_task = asyncio.create_task(run_bot_polling())
+            logger.info("Бот: polling (локальный режим)")
+        else:
+            logger.error("Неизвестный BOT_MODE=%s (polling | webhook)", mode)
 
     yield
 
@@ -64,8 +74,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.bot_webhook import router as bot_webhook_router  # noqa: E402
 from app.routers import calendar, groups, proposals, users  # noqa: E402
 
+app.include_router(bot_webhook_router)
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(calendar.router)
@@ -77,12 +89,12 @@ async def health():
     return {
         "status": "ok",
         "bot_configured": bool(settings.bot_token),
+        "bot_mode": settings.bot_mode,
         "webapp_url": settings.webapp_url,
         "static_built": FRONTEND_DIST is not None,
         "static_path": str(FRONTEND_DIST) if FRONTEND_DIST else None,
     }
 
 
-# Статика последней — иначе перекроет /api
 if FRONTEND_DIST:
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")

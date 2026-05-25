@@ -54,7 +54,23 @@ git push -u origin master
 Проверка в браузере: `https://meetup-planner.onrender.com/` — должна открыться страница приложения.  
 Проверка API: `https://meetup-planner.onrender.com/api/health` → `"static_built": true`
 
-## 5. Важно
+## 5. Ошибка `Conflict: terminated by other getUpdates`
+
+Одновременно может работать **только один** способ получения обновлений:
+
+| Где | `BOT_MODE` |
+|-----|------------|
+| **Render** | `webhook` (в `render.yaml` уже так) |
+| **Локально** | `polling` в `.env` |
+
+**Сделайте:**
+
+1. Остановите локальный бот (`python -m bot.main`, второй терминал).
+2. Render → Environment → `BOT_MODE` = `webhook`.
+3. Redeploy. В логах: `Webhook: https://meetup-planner.onrender.com/webhook/telegram`.
+4. Не запускайте второй сервис/воркер с тем же `BOT_TOKEN`.
+
+## 6. Важно
 
 - **SQLite** на бесплатном Render: данные могут сброситься при пересборке. Для продакшена подключите [Render PostgreSQL](https://render.com/docs/databases) и замените `DATABASE_URL`.
 - Токен бота **никогда** не коммитьте — только в переменных Render.
