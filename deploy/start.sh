@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# API (uvicorn) + бот (polling) в одном контейнере Render
+# Только uvicorn — бот стартует внутри FastAPI (app.main lifespan)
 set -euo pipefail
-# Docker: /app/backend; локально: .../backend
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -d "$SCRIPT_DIR/../backend" ]; then
   cd "$SCRIPT_DIR/../backend"
@@ -12,18 +11,5 @@ fi
 mkdir -p data
 export PORT="${PORT:-8000}"
 
-BOT_PID=""
-if [ -n "${BOT_TOKEN:-}" ]; then
-  echo "==> Starting Telegram bot (background)"
-  python -m bot.main &
-  BOT_PID=$!
-  cleanup() {
-    kill "$BOT_PID" 2>/dev/null || true
-  }
-  trap cleanup EXIT
-else
-  echo "==> BOT_TOKEN not set, bot skipped (API only)"
-fi
-
-echo "==> Starting API on port $PORT"
-exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"
+echo "==> API + bot (single process) on port $PORT"
+exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --workers 1

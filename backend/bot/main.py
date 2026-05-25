@@ -171,13 +171,18 @@ async def setup_webapp_menu() -> None:
         logging.warning("Не удалось обновить Menu Button: %s", e)
 
 
-async def main():
+async def run_bot_polling() -> None:
+    """Polling в фоне FastAPI (один процесс — без гонок SQLite)."""
     if not settings.bot_token:
-        logging.error("BOT_TOKEN не задан — бот не запущен")
+        logging.error("BOT_TOKEN не задан")
         return
-    await init_db()
     await setup_webapp_menu()
     await dp.start_polling(bot)
+
+
+async def main():
+    await init_db()
+    await run_bot_polling()
 
 
 if __name__ == "__main__":

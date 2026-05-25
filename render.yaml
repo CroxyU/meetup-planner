@@ -8,6 +8,8 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
+    # Дольше ждём старт Docker + бот
+    healthCheckGracePeriodSeconds: 180
     envVars:
       - key: BOT_TOKEN
         sync: false

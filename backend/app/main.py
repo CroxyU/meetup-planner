@@ -1,28 +1,26 @@
 """Точка входа FastAPI."""
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.config import settings
 from app.database import init_db
-from app.routers import calendar, groups, proposals, users
 
 logger = logging.getLogger(__name__)
 
 
 def resolve_frontend_dist() -> Path | None:
-    """Ищет собранный Mini App (Docker: /app/frontend/dist)."""
     here = Path(__file__).resolve()
-    candidates = [
+    for path in (
         here.parents[2] / "frontend" / "dist",
         Path("/app/frontend/dist"),
         here.parents[1].parent / "frontend" / "dist",
-    ]
-    for path in candidates:
+    ):
         if (path / "index.html").is_file():
             return path
     return None
@@ -35,10 +33,25 @@ FRONTEND_DIST = resolve_frontend_dist()
 async def lifespan(app: FastAPI):
     await init_db()
     if FRONTEND_DIST:
-        logger.info("Mini App static: %s", FRONTEND_DIST)
+        logger.info("Mini App: %s", FRONTEND_DIST)
     else:
-        logger.warning("frontend/dist не найден — Mini App по / не откроется")
+        logger.error("frontend/dist не найден")
+
+    bot_task = None
+    if settings.bot_token:
+        from bot.main import run_bot_polling
+
+        bot_task = asyncio.create_task(run_bot_polling())
+        logger.info("Бот запущен в том же процессе (без конфликта SQLite)")
+
     yield
+
+    if bot_task:
+        bot_task.cancel()
+        try:
+            await bot_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="Meetup Planner API", lifespan=lifespan)
@@ -51,6 +64,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.routers import calendar, groups, proposals, users  # noqa: E402
+
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(calendar.router)
@@ -59,8 +74,6 @@ app.include_router(proposals.router)
 
 @app.get("/api/health")
 async def health():
-    from app.config import settings
-
     return {
         "status": "ok",
         "bot_configured": bool(settings.bot_token),
@@ -70,23 +83,6 @@ async def health():
     }
 
 
+# Статика последней — иначе перекроет /api
 if FRONTEND_DIST:
-    assets_dir = FRONTEND_DIST / "assets"
-    if assets_dir.is_dir():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(FRONTEND_DIST / "index.html")
-
-    @app.get("/{page:path}")
-    async def spa_fallback(page: str):
-        # Не перехватываем API
-        if page.startswith("api/"):
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=404)
-        file_path = FRONTEND_DIST / page
-        if file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(FRONTEND_DIST / "index.html")
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")
