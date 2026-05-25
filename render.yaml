@@ -12,7 +12,7 @@ services:
       - key: BOT_TOKEN
         sync: false
       - key: WEBAPP_URL
-        sync: false
+        value: https://meetup-planner.onrender.com
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL

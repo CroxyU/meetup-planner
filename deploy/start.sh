@@ -12,14 +12,18 @@ fi
 mkdir -p data
 export PORT="${PORT:-8000}"
 
-echo "==> Starting Telegram bot (background)"
-python -m bot.main &
-BOT_PID=$!
-
-cleanup() {
-  kill "$BOT_PID" 2>/dev/null || true
-}
-trap cleanup EXIT
+BOT_PID=""
+if [ -n "${BOT_TOKEN:-}" ]; then
+  echo "==> Starting Telegram bot (background)"
+  python -m bot.main &
+  BOT_PID=$!
+  cleanup() {
+    kill "$BOT_PID" 2>/dev/null || true
+  }
+  trap cleanup EXIT
+else
+  echo "==> BOT_TOKEN not set, bot skipped (API only)"
+fi
 
 echo "==> Starting API on port $PORT"
 exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"

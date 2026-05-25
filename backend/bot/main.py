@@ -146,6 +146,9 @@ async def on_vote(callback: CallbackQuery):
 
 
 async def main():
+    if not settings.bot_token:
+        logging.error("BOT_TOKEN не задан — бот не запущен")
+        return
     await init_db()
     await dp.start_polling(bot)
 

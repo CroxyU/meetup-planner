@@ -34,7 +34,15 @@ app.include_router(proposals.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    from app.config import settings
+
+    _dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    return {
+        "status": "ok",
+        "bot_configured": bool(settings.bot_token),
+        "webapp_url": settings.webapp_url,
+        "static_built": _dist.exists(),
+    }
 
 
 # Статика Mini App после сборки (npm run build)

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    bot_token: str
+    bot_token: str = ""  # обязателен для бота; API стартует и без него
     webapp_url: str = "http://localhost:5173"
     api_host: str = "0.0.0.0"
     api_port: int = 8000  # на Render подставляется PORT
