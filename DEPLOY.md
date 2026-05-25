@@ -43,12 +43,16 @@ git push -u origin master
    - `BOT_TOKEN` — токен от [@BotFather](https://t.me/BotFather)
    - `WEBAPP_URL` — `https://meetup-planner.onrender.com` (ваш URL сервиса после первого деплоя)
 
-## 4. BotFather
+## 4. BotFather (обязательно при 503 в Mini App)
 
-После успешного деплоя:
+1. **Домен Mini App:** `/setdomain` → `meetup-planner.onrender.com`
+2. **Menu Button → Configure menu button → URL:**  
+   `https://meetup-planner.onrender.com` (без слэша в конце)
+3. **Render → Environment:** `WEBAPP_URL` = тот же URL (не `localhost`!)
+4. В Telegram: снова `/start` у бота (обновит кнопку)
 
-- **Menu Button / Web App URL:** значение `WEBAPP_URL`
-- Проверка: `https://ВАШ-URL.onrender.com/api/health` → `{"status":"ok"}`
+Проверка в браузере: `https://meetup-planner.onrender.com/` — должна открыться страница приложения.  
+Проверка API: `https://meetup-planner.onrender.com/api/health` → `"static_built": true`
 
 ## 5. Важно
 

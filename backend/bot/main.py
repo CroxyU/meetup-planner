@@ -32,13 +32,17 @@ bot = Bot(token=settings.bot_token)
 dp = Dispatcher()
 
 
+def webapp_url() -> str:
+    return settings.webapp_url.rstrip("/")
+
+
 def webapp_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="📅 Открыть календарь",
-                    web_app=WebAppInfo(url=settings.webapp_url),
+                    web_app=WebAppInfo(url=webapp_url()),
                 )
             ]
         ]
@@ -94,7 +98,7 @@ async def cmd_start(message: Message):
     try:
         await bot.set_chat_menu_button(
             chat_id=message.chat.id,
-            menu_button=MenuButtonWebApp(text="Календарь", web_app=WebAppInfo(url=settings.webapp_url)),
+            menu_button=MenuButtonWebApp(text="Календарь", web_app=WebAppInfo(url=webapp_url())),
         )
     except Exception:
         pass
@@ -145,11 +149,34 @@ async def on_vote(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=None)
 
 
+async def setup_webapp_menu() -> None:
+    """Глобальная кнопка меню с актуальным WEBAPP_URL (для всех чатов)."""
+    url = settings.webapp_url.rstrip("/")
+    if not url.startswith("https://"):
+        logging.error(
+            "WEBAPP_URL должен быть HTTPS (сейчас: %s). "
+            "Задайте в Render: https://meetup-planner.onrender.com",
+            settings.webapp_url,
+        )
+        return
+    try:
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="Календарь",
+                web_app=WebAppInfo(url=url),
+            )
+        )
+        logging.info("Menu Web App URL: %s", url)
+    except Exception as e:
+        logging.warning("Не удалось обновить Menu Button: %s", e)
+
+
 async def main():
     if not settings.bot_token:
         logging.error("BOT_TOKEN не задан — бот не запущен")
         return
     await init_db()
+    await setup_webapp_menu()
     await dp.start_polling(bot)
 
 
