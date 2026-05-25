@@ -1,4 +1,6 @@
 """Конфигурация приложения из переменных окружения."""
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,8 +20,14 @@ class Settings(BaseSettings):
 
     @property
     def effective_port(self) -> int:
-        import os
         return int(os.environ.get("PORT", self.api_port))
+
+    @property
+    def effective_bot_mode(self) -> str:
+        """На Render всегда webhook (даже если BOT_MODE не задан в Dashboard)."""
+        if os.getenv("RENDER", "").lower() in ("true", "1", "yes"):
+            return "webhook"
+        return (self.bot_mode or "polling").lower().strip()
     database_url: str = "sqlite+aiosqlite:///./meetup.db"
     secret_key: str = "dev-secret-change-in-production"
 

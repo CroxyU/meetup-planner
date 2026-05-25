@@ -1,6 +1,7 @@
 """Точка входа FastAPI."""
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -39,8 +40,8 @@ async def lifespan(app: FastAPI):
 
     bot_task = None
     if settings.bot_token:
-        mode = (settings.bot_mode or "polling").lower()
-        logger.info("BOT_MODE=%s", mode)
+        mode = settings.effective_bot_mode
+        logger.info("BOT_MODE=%s (env=%s)", mode, settings.bot_mode)
 
         if mode == "webhook":
             from bot.main import run_bot_webhook_mode
@@ -50,7 +51,7 @@ async def lifespan(app: FastAPI):
             from bot.main import run_bot_polling
 
             bot_task = asyncio.create_task(run_bot_polling())
-            logger.info("Бот: polling (локальный режим)")
+            logger.info("Бот: polling (только локально)")
         else:
             logger.error("Неизвестный BOT_MODE=%s (polling | webhook)", mode)
 
@@ -62,6 +63,14 @@ async def lifespan(app: FastAPI):
             await bot_task
         except asyncio.CancelledError:
             pass
+
+    if settings.bot_token:
+        try:
+            from bot.main import close_bot_session
+
+            await close_bot_session()
+        except Exception as e:
+            logger.debug("bot session close: %s", e)
 
 
 app = FastAPI(title="Meetup Planner API", lifespan=lifespan)
@@ -89,7 +98,9 @@ async def health():
     return {
         "status": "ok",
         "bot_configured": bool(settings.bot_token),
-        "bot_mode": settings.bot_mode,
+        "bot_mode": settings.effective_bot_mode,
+        "bot_mode_env": settings.bot_mode,
+        "on_render": bool(os.environ.get("RENDER")),
         "webapp_url": settings.webapp_url,
         "static_built": FRONTEND_DIST is not None,
         "static_path": str(FRONTEND_DIST) if FRONTEND_DIST else None,

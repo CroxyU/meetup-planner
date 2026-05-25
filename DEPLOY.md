@@ -65,10 +65,12 @@ git push -u origin master
 
 **Сделайте:**
 
-1. Остановите локальный бот (`python -m bot.main`, второй терминал).
-2. Render → Environment → `BOT_MODE` = `webhook`.
-3. Redeploy. В логах: `Webhook: https://meetup-planner.onrender.com/webhook/telegram`.
-4. Не запускайте второй сервис/воркер с тем же `BOT_TOKEN`.
+1. **Остановите локальный бот** — `python -m bot.main` сбрасывает webhook и ломает прод!
+2. Render → Environment → `BOT_MODE` = `webhook` (или не задавайте — на Render включится автоматически).
+3. Redeploy. В логах **только**: `Webhook установлен: ...` — **без** `Start polling`.
+4. Один сервис Render с этим `BOT_TOKEN`, без дубликатов.
+
+`terminated by setWebhook request` — старый процесс ещё делал polling, пока новый поставил webhook. После redeploy ошибка должна пропасть.
 
 ## 6. Важно
 

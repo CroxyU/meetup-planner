@@ -4,6 +4,7 @@ Telegram-бот: /start, приглашения в группу, callback гол
 """
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -172,21 +173,35 @@ async def setup_webapp_menu() -> None:
 
 
 async def setup_webhook() -> None:
-    """Продакшен: один webhook вместо polling (нет Conflict на Render)."""
+    """Продакшен: только webhook, без polling."""
     url = f"{webapp_url()}/webhook/telegram"
-    await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_webhook(url, drop_pending_updates=True)
-    logging.info("Webhook: %s", url)
+    logging.info("Webhook установлен: %s", url)
+
+
+async def close_bot_session() -> None:
+    """Закрывает aiohttp-сессию (убирает Unclosed client session)."""
+    await bot.session.close()
 
 
 async def run_bot_polling() -> None:
-    """Локальная разработка: polling (сначала снимаем webhook)."""
+    """Только локально. На Render polling запрещён."""
+    if os.getenv("RENDER", "").lower() in ("true", "1", "yes"):
+        logging.error("Polling на Render запрещён. Должен быть BOT_MODE=webhook.")
+        return
     if not settings.bot_token:
         logging.error("BOT_TOKEN не задан")
         return
+    logging.warning(
+        "Локальный polling отключит webhook на Render! "
+        "Остановите этот процесс, если прод работает в облаке."
+    )
     await bot.delete_webhook(drop_pending_updates=True)
     await setup_webapp_menu()
-    await dp.start_polling(bot, drop_pending_updates=True)
+    try:
+        await dp.start_polling(bot, drop_pending_updates=True)
+    finally:
+        await close_bot_session()
 
 
 async def run_bot_webhook_mode() -> None:
